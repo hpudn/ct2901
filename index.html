@@ -1,702 +1,373 @@
 <!DOCTYPE html>
 <html lang="vi">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Hệ Thống Điểm Danh Thông Minh</title>
+    <title>Create wallpaper QR Code</title>
+    <!-- Nhúng Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <script type="text/javascript" src="https://unpkg.com/@zxing/library@0.21.3/umd/index.min.js"></script>
-    <script src="https://unpkg.com/@phosphor-icons/web"></script>
-   
+    <!-- Nhúng thư viện QRCode.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <!-- Nhúng thư viện html2canvas để chụp ảnh trọn vẹn hình nền -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <!-- Font chữ hiện đại -->
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;500;700;900&display=swap" rel="stylesheet">
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['"Outfit"', 'sans-serif'],
+                    },
+                    colors: {
+                        'cyber-bg': '#050505',      /* Nền đen sâu thẳm */
+                        'cyber-green': '#86efac',   /* Xanh lá mạ phát sáng */
+                        'cyber-neon': '#4ade80',    /* Xanh neon mạnh hơn */
+                        'cyber-purple': '#9333ea',  /* Tím của sticker */
+                        'card-bg': 'rgba(255, 255, 255, 0.03)',
+                    }
+                }
+            }
+        }
+    </script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-
         body {
-            background-color: #F8FAFC; 
-            min-height: 100vh;
-            font-family: 'Plus Jakarta Sans', sans-serif;
-            color: #1E293B;
-            position: relative;
+            background-color: #050505;
+            -webkit-font-smoothing: antialiased;
             overflow-x: hidden;
-            -webkit-tap-highlight-color: transparent; /* Giúp chạm trên điện thoại không bị nháy xám */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
         }
-        
-        .bg-glow {
+
+        /* ❀ Hiệu ứng hạt bụi không gian (Cyber Particles) */
+        .particles-bg {
             position: absolute;
-            width: 600px;
-            height: 600px;
-            background: radial-gradient(circle, rgba(224,231,255,0.8) 0%, rgba(248,250,252,0) 70%);
-            border-radius: 50%;
-            top: -200px;
-            left: -100px;
-            z-index: -1;
-            pointer-events: none;
-        }
-        
-        .bg-glow-2 {
-            position: absolute;
-            width: 500px;
-            height: 500px;
-            background: radial-gradient(circle, rgba(243,232,255,0.6) 0%, rgba(248,250,252,0) 70%);
-            border-radius: 50%;
-            bottom: -100px;
-            right: -100px;
-            z-index: -1;
+            inset: 0;
+            background-image:
+                radial-gradient(circle at 15% 50%, rgba(74, 222, 128, 0.08) 0%, transparent 50%),
+                radial-gradient(circle at 85% 30%, rgba(74, 222, 128, 0.05) 0%, transparent 40%);
+            z-index: 0;
             pointer-events: none;
         }
 
-        .bento-card {
-            background: #FFFFFF;
-            border-radius: 24px;
-            box-shadow: 0 10px 40px -10px rgba(0, 0, 0, 0.04), 0 1px 3px rgba(0, 0, 0, 0.02);
-            border: 1px solid rgba(241, 245, 249, 1);
-            position: relative;
-            overflow: hidden;
-        }
-        
-        @media (min-width: 768px) {
-            .bento-card { border-radius: 28px; }
-        }
-
-        .btn-gradient {
-            background: linear-gradient(135deg, #3B82F6 0%, #4F46E5 100%);
-            color: white;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-            box-shadow: 0 8px 20px -6px rgba(79, 70, 229, 0.4);
-            border-radius: 9999px;
-        }
-        
-        .btn-gradient:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 12px 25px -6px rgba(79, 70, 229, 0.5);
-        }
-        
-        .btn-gradient:active {
-            transform: translateY(1px);
-            box-shadow: 0 4px 10px -4px rgba(79, 70, 229, 0.4);
-        }
-
-        .text-gradient {
-            background: linear-gradient(135deg, #2563EB 0%, #4F46E5 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .scan-focus-box {
-            border: 2px dashed rgba(255, 255, 255, 0.6);
-            border-radius: 12px;
-            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55);
-            transition: all 0.2s ease; /* Chuyển động mượt mà cho 0.2s */
-        }
-        
-        .scan-success {
-            border-color: #10B981 !important;
-            background-color: rgba(16, 185, 129, 0.2);
-            box-shadow: 0 0 0 9999px rgba(15, 23, 42, 0.55), inset 0 0 30px rgba(16, 185, 129, 0.5);
-        }
-
-        .scanner-laser {
+        /* ❀ Lưới ma trận mờ ảo phía sau */
+        .matrix-grid {
             position: absolute;
+            inset: 0;
+            background-image: linear-gradient(rgba(74, 222, 128, 0.05) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(74, 222, 128, 0.05) 1px, transparent 1px);
+            background-size: 20px 20px;
+            opacity: 0.3;
+            z-index: 0;
+        }
+
+        /* ❀ Khu vực Khung Hình Nền Khóa (Phone Wallpaper Ratio) */
+        #wallpaper-preview {
+            aspect-ratio: 9 / 19.5;
+            /* Tỉ lệ màn hình điện thoại hiện đại */
             width: 100%;
-            height: 2px;
-            background: #3B82F6;
-            box-shadow: 0 0 15px #3B82F6, 0 0 30px #60A5FA;
-            top: 0;
-            left: 0;
-            animation: scan 1.2s cubic-bezier(0.4, 0, 0.2, 1) infinite;
+            max-width: 340px;
+            position: relative;
+            background-color: #080a08;
+            border-radius: 2.5rem;
+            overflow: hidden;
+            box-shadow: 0 0 50px rgba(74, 222, 128, 0.1);
+            display: none;
+            /* Ban đầu ẩn đi */
+            transform: scale(0.95);
+            opacity: 0;
+            transition: all 0.6s cubic-bezier(0.16, 1, 0.3, 1);
         }
 
-        @keyframes scan {
-            0% { top: 0; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
+        #wallpaper-preview.show {
+            display: block;
+            transform: scale(1);
+            opacity: 1;
         }
 
-        /* Custom Scrollbar Mobile & Desktop */
-        .custom-scrollbar::-webkit-scrollbar { height: 4px; width: 4px; }
-        @media (min-width: 768px) { .custom-scrollbar::-webkit-scrollbar { height: 6px; width: 6px; } }
-        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #E2E8F0; border-radius: 10px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #CBD5E1; }
+        /* ❀ Tấm thẻ trong suốt (Glass Card) có vết cắt (notch) như thiết kế anh gửi */
+        .glass-card {
+            background: rgba(20, 30, 20, 0.6);
+            backdrop-filter: blur(16px);
+            -webkit-backdrop-filter: blur(16px);
+            border: 1px solid rgba(74, 222, 128, 0.15);
+            border-radius: 2rem;
+            position: relative;
+        }
+
+        /* Vết cắt (Notch) mô phỏng ở cạnh trên của thẻ */
+        .card-notch {
+            position: absolute;
+            top: -1px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 80px;
+            height: 20px;
+            background: #080a08;
+            border-bottom-left-radius: 16px;
+            border-bottom-right-radius: 16px;
+            border-bottom: 1px solid rgba(74, 222, 128, 0.15);
+            border-left: 1px solid rgba(74, 222, 128, 0.15);
+            border-right: 1px solid rgba(74, 222, 128, 0.15);
+        }
+
+        /* ❀ Phép thuật tạo hào quang phát sáng nhịp nhàng (Neon Pulse Glow) ❀ */
+        @keyframes neonGlow {
+
+            0%,
+            100% {
+                filter: drop-shadow(0 0 3px rgba(134, 239, 172, 0.4)) drop-shadow(0 0 10px rgba(134, 239, 172, 0.2));
+            }
+
+            50% {
+                filter: drop-shadow(0 0 8px rgba(134, 239, 172, 1)) drop-shadow(0 0 25px rgba(134, 239, 172, 0.7));
+            }
+        }
+
+        /* Ép mã QR phủ kín container */
+        #qrcode img,
+        #qrcode canvas {
+            width: 100% !important;
+            height: auto !important;
+            border-radius: 12px;
+            /* ❀ Trang khoác chiếc áo phát sáng cho mã QR ở đây ạ ❀ */
+            animation: neonGlow 2.5s infinite ease-in-out;
+        }
+
+        ::-webkit-scrollbar {
+            display: none;
+        }
     </style>
 </head>
-<body class="p-3 sm:p-4 md:p-8 flex flex-col items-center">
 
-    <div class="bg-glow"></div>
-    <div class="bg-glow-2"></div>
+<body class="text-white w-full">
 
-    <header class="text-center mb-5 md:mb-10 w-full max-w-4xl mt-2 md:mt-4 relative z-10">
-        <div class="inline-flex items-center justify-center p-2.5 md:p-3.5 bg-white rounded-[1rem] md:rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-slate-100 mb-3 md:mb-5 text-blue-600 transform transition hover:scale-105">
-            <i class="ph-fill ph-aperture text-2xl md:text-3xl"></i>
-        </div>
-        <h1 class="text-2xl sm:text-3xl md:text-5xl font-extrabold mb-2 md:mb-4 text-slate-800 tracking-tight">
-            Hệ Thống Điểm Danh <span class="text-gradient">Tự Động</span>
-        </h1>
-        <p class="text-[13px] sm:text-sm md:text-lg text-slate-500 max-w-2xl mx-auto font-medium px-4">
-            Đưa <b class="text-blue-600">Mã Vạch</b> trên thẻ vào khung hình để nhận diện siêu tốc.
-        </p>
-    </header>
+    <div class="particles-bg"></div>
+    <div class="matrix-grid"></div>
 
-    <main class="w-full max-w-6xl grid grid-cols-1 lg:grid-cols-12 gap-4 sm:gap-5 md:gap-8 relative z-10">
-        
-        <!-- CỘT TRÁI: KHU VỰC CAMERA -->
-        <div class="lg:col-span-7 flex flex-col h-full">
-            <div class="bento-card p-4 sm:p-5 md:p-8 flex-grow flex flex-col">
-                <div class="flex flex-wrap justify-between items-center gap-2 mb-4 md:mb-6">
-                    <div class="flex items-center gap-2 md:gap-3">
-                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-blue-50 flex items-center justify-center text-blue-600 shrink-0">
-                            <i class="ph-fill ph-scan text-lg md:text-xl"></i>
-                        </div>
-                        <h2 class="text-base sm:text-lg font-bold text-slate-800">Máy Quét Toàn Năng</h2>
-                    </div>
-                    
-                    <div class="flex items-center gap-1.5 md:gap-2">
-                        <span id="auto-badge" class="hidden px-2 md:px-3 py-1 bg-blue-50 text-blue-600 border border-blue-100 text-[10px] md:text-[11px] font-bold rounded-full animate-pulse flex items-center gap-1 md:gap-1.5 shadow-sm">
-                            <i class="ph-fill ph-record text-blue-500"></i> ĐANG QUÉT
-                        </span>
-                    </div>
-                </div>
-                
-                <!-- 🌟 TỐI ƯU MOBILE: Đổi aspect-video thành aspect-[4/3] trên điện thoại để camera không bị dẹt -->
-                <div class="relative w-full bg-slate-900 rounded-[16px] md:rounded-[20px] overflow-hidden aspect-[4/3] md:aspect-video flex items-center justify-center shadow-lg border-2 md:border-4 border-slate-50">
-                    <video id="camera-feed" class="w-full h-full object-cover" autoplay playsinline></video>
-                    
-                    <div id="scan-guide" class="absolute inset-0 hidden items-center justify-center pointer-events-none z-10">
-                        <!-- 🌟 TỐI ƯU MOBILE: Khung lấy nét rộng ngang, ngắn dọc để vừa vặn mã vạch -->
-                        <div id="focus-box" class="scan-focus-box w-[85%] h-[40%] md:w-[80%] md:h-[50%] relative overflow-hidden">
-                            <div class="scanner-laser"></div>
-                        </div>
-                    </div>
+    <div
+        class="w-full max-w-[400px] mx-auto min-h-[100dvh] flex flex-col p-6 relative z-10 items-center justify-center">
 
-                    <div id="camera-placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-slate-400 z-20 bg-slate-50/80 backdrop-blur-sm">
-                        <div class="w-12 h-12 md:w-16 md:h-16 bg-white rounded-[1rem] md:rounded-2xl shadow-sm mb-3 md:mb-4 flex items-center justify-center border border-slate-100">
-                            <i class="ph ph-video-camera-slash text-2xl md:text-3xl text-slate-400"></i>
-                        </div>
-                        <p class="font-semibold text-slate-500 text-[13px] md:text-base">Camera đang ở trạng thái nghỉ</p>
-                    </div>
-                </div>
+        <!-- ========================================== -->
+        <!-- MÀN HÌNH 1: KHU VỰC NHẬP LIỆU BẮT ĐẦU       -->
+        <!-- ========================================== -->
+        <div id="input-section" class="w-full flex flex-col items-center transition-all duration-500">
+            <h1
+                class="text-4xl font-bold mb-2 text-transparent bg-clip-text bg-gradient-to-r from-cyber-green to-white text-center">
+                QR SCAN
+            </h1>
+            <p class="text-gray-400 text-sm mb-10 text-center">Nhập mã sinh viên để tạo hình nền khóa</p>
 
-                <div class="mt-4 md:mt-6 z-10">
-                    <button id="btn-start-camera" onclick="khoiDongCamera()" class="w-full btn-gradient px-4 md:px-6 py-3.5 md:py-4 font-bold flex items-center justify-center gap-2 text-[15px] md:text-base shadow-md">
-                        <i class="ph-fill ph-play-circle text-lg md:text-xl"></i> Bật Camera Quét Thẻ
-                    </button>
-                </div>
-                
-                <!-- Thông báo trạng thái tối ưu UI cho ngón tay -->
-                <div id="system-status" class="mt-3 md:mt-5 p-3 md:p-4 rounded-[12px] md:rounded-[16px] bg-slate-50 border border-slate-100 flex items-center gap-2 md:gap-3 text-[12px] sm:text-[13px] md:text-sm font-medium text-slate-600 transition-all duration-300">
-                    <i class="ph-fill ph-info text-slate-400 text-base md:text-lg shrink-0"></i>
-                    <span>Hệ thống đang ở trạng thái chờ. Vui lòng kích hoạt camera.</span>
-                </div>
+            <div class="w-full relative mb-6">
+                <input type="text" id="studentId" placeholder="Nhập mã sinh viên..."
+                    class="w-full bg-[#111] text-white text-lg rounded-2xl px-6 py-4 text-center focus:outline-none focus:ring-2 focus:ring-cyber-green transition-all font-medium border border-white/10 placeholder:text-gray-600">
+                <p id="errorMessage"
+                    class="absolute -top-6 left-0 w-full text-center text-cyber-neon text-xs opacity-0 transition-opacity font-semibold">
+                    ❀ Hãy nhập thông tin vào
+                </p>
             </div>
+
+            <button onclick="generateWallpaper()"
+                class="w-full bg-cyber-green hover:bg-cyber-neon active:scale-95 text-[#050505] rounded-full py-4 text-[17px] font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+                Create Wallpaper
+            </button>
         </div>
 
-        <!-- CỘT PHẢI: DANH SÁCH SINH VIÊN -->
-        <div class="lg:col-span-5 h-full">
-            <div class="bento-card p-4 sm:p-5 md:p-8 flex flex-col h-full max-h-[450px] lg:max-h-[750px]">
-                <div class="flex justify-between items-center gap-2 mb-4 md:mb-6">
-                    <div class="flex items-center gap-2 md:gap-3">
-                        <div class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 shrink-0">
-                            <i class="ph-fill ph-users-three text-lg md:text-xl"></i>
+        <!-- ========================================== -->
+        <!-- MÀN HÌNH 2: KHUNG PREVIEW HÌNH NỀN KHÓA    -->
+        <!-- (Khu vực này sẽ được chụp lại bằng html2canvas) -->
+        <!-- ========================================== -->
+        <div id="wallpaper-wrapper" class="w-full flex flex-col items-center hidden">
+
+            <!-- Đây là bản thể hình nền sẽ được chụp -->
+            <div id="wallpaper-preview" class="mb-6 relative">
+                <!-- Nền của điện thoại (họa tiết xước mờ) -->
+                <div class="absolute inset-0 bg-[#080a08] overflow-hidden">
+                    <div class="absolute w-[200%] h-[200%] top-[-50%] left-[-50%] opacity-20"
+                        style="background-image: radial-gradient(circle, rgba(134, 239, 172, 0.4) 0%, transparent 60%);">
+                    </div>
+                    <!-- Các chấm sáng nhỏ li ti -->
+                    <div
+                        class="absolute top-[20%] left-[10%] w-1 h-1 bg-cyber-green rounded-full shadow-[0_0_10px_#86efac]">
+                    </div>
+                    <div
+                        class="absolute top-[60%] right-[15%] w-1.5 h-1.5 bg-cyber-green rounded-full shadow-[0_0_15px_#86efac] opacity-60">
+                    </div>
+                </div>
+
+                <!-- Tấm thẻ nội dung chính giữa màn hình -->
+                <div class="absolute inset-0 p-6 flex flex-col items-center justify-center z-10">
+
+                    <div class="glass-card w-full p-8 flex flex-col items-center shadow-2xl">
+                        <!-- Vết cắt giả lập ở viền trên tấm thẻ -->
+                        <div class="card-notch"></div>
+
+                        <h2
+                            class="text-4xl font-black text-cyber-green mb-8 text-center leading-tight tracking-tight mt-2 tracking-widest">
+                            <br>
+                        </h2>
+
+                        <div
+                            class="relative w-full aspect-square bg-cyber-green p-2 rounded-2xl shadow-[0_0_45px_rgba(134,239,172,0.35)] mb-8">
+
+                            <!-- Nơi mã QR hiển thị -->
+                            <div id="qrcode"
+                                class="w-full h-full bg-[#86efac] rounded-xl flex items-center justify-center overflow-hidden">
+                            </div>
+
                         </div>
-                        <div>
-                            <h2 class="text-base sm:text-lg font-bold text-slate-800 leading-tight">Danh Sách Lớp</h2>
-                            <p class="text-[11px] md:text-xs text-slate-500 font-medium mt-0.5">
-                                Đã đến: <strong id="count-attended" class="text-blue-600 text-[13px] md:text-sm">0</strong> / <span id="count-total">0</span>
-                            </p>
+
+                        <!-- Thông tin phụ -->
+                        <div class="w-full flex flex-col items-center gap-2">
+                            <p class="text-gray-400 text-xs uppercase tracking-widest font-semibold">Mã Định Danh</p>
+                            <p id="displayId" class="text-white text-lg font-bold tracking-wider">---</p>
+                            <div class="h-[1px] w-1/2 bg-cyber-green/30 my-2"></div>
+                            <p class="text-cyber-green text-xs opacity-80">QR SCAN ROLL CALL</p>
                         </div>
                     </div>
-                    
-                    <button onclick="tongHopBaoCao()" class="text-[12px] md:text-sm bg-white hover:bg-slate-50 text-slate-700 px-3 sm:px-4 md:px-5 py-2 md:py-2.5 rounded-full transition-all flex items-center gap-1.5 border border-slate-200 shadow-sm font-bold active:scale-95 shrink-0">
-                        <i class="ph-fill ph-export text-blue-600 text-sm md:text-base"></i> <span class="hidden sm:inline">Báo Cáo</span><span class="sm:hidden">Xuất</span>
-                    </button>
-                </div>
-
-                <div class="flex-grow overflow-x-auto overflow-y-auto rounded-[12px] md:rounded-[16px] border border-slate-100 bg-slate-50/30 relative custom-scrollbar">
-                    <table class="w-full text-left text-sm min-w-[280px] sm:min-w-[320px]">
-                        <thead class="bg-slate-50 sticky top-0 z-10 border-b border-slate-100">
-                            <tr>
-                                <th class="p-3 md:p-4 font-bold text-slate-400 text-[9px] sm:text-[10px] md:text-xs uppercase tracking-wider">Mã SV</th>
-                                <th class="p-3 md:p-4 font-bold text-slate-400 text-[9px] sm:text-[10px] md:text-xs uppercase tracking-wider">Họ & Tên</th>
-                                <th class="p-3 md:p-4 font-bold text-slate-400 text-[9px] sm:text-[10px] md:text-xs uppercase tracking-wider text-right">Trạng Thái</th>
-                            </tr>
-                        </thead>
-                        <tbody id="student-table-body" class="divide-y divide-slate-100">
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-    </main>
-
-    <!-- MODAL BÁO CÁO -->
-    <div id="report-modal" class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/30 backdrop-blur-md transition-all duration-300 opacity-0 pointer-events-none p-4">
-        <div class="bento-card p-5 md:p-8 w-full max-w-2xl relative transform transition-all duration-300 scale-95 shadow-2xl shadow-blue-900/10 flex flex-col max-h-[90vh]" id="report-modal-content">
-            
-            <div class="flex justify-between items-start mb-4 md:mb-5 border-b border-slate-100 pb-4 md:pb-5 shrink-0">
-                <div class="flex items-center gap-2 md:gap-3">
-                    <div class="w-10 h-10 md:w-12 md:h-12 rounded-[1rem] bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0">
-                        <i class="ph-fill ph-file-text text-xl md:text-2xl"></i>
-                    </div>
-                    <div>
-                        <h3 class="text-lg md:text-xl font-bold text-slate-800">Tổng Hợp Báo Cáo</h3>
-                        <p class="text-[11px] md:text-sm text-slate-500 mt-0.5 md:mt-1 font-medium">Hệ thống tự động đối chiếu dữ liệu.</p>
-                    </div>
-                </div>
-                <button onclick="dongModalBaoCao()" class="text-slate-400 hover:text-slate-600 transition-colors p-1.5 md:p-2 bg-slate-100 hover:bg-slate-200 rounded-full shrink-0">
-                    <i class="ph ph-x text-base md:text-lg"></i>
-                </button>
-            </div>
-            
-            <div class="bg-slate-50 p-3 md:p-5 rounded-xl md:rounded-2xl border border-slate-100 relative flex-grow overflow-hidden flex flex-col">
-                <textarea id="report-text-area" class="w-full h-full min-h-[150px] md:min-h-[250px] text-slate-700 text-[13px] sm:text-sm md:text-base font-medium resize-none focus:outline-none focus:ring-0 bg-transparent custom-scrollbar" readonly></textarea>
-                
-                <div id="copy-toast" class="absolute top-2 right-2 md:top-4 md:right-4 bg-emerald-100 text-emerald-700 px-2.5 md:px-3 py-1 md:py-1.5 rounded-full text-[10px] md:text-xs font-bold flex items-center gap-1 md:gap-1.5 opacity-0 transition-opacity shadow-sm">
-                    <i class="ph-fill ph-check-circle"></i> Đã sao chép!
                 </div>
             </div>
 
-            <div class="mt-4 md:mt-6 flex justify-end gap-2 md:gap-3 shrink-0">
-                <button onclick="dongModalBaoCao()" class="px-4 md:px-6 py-2 md:py-3 rounded-full text-slate-500 text-[13px] md:text-base font-bold hover:bg-slate-100 transition-colors">
-                    Đóng
+            <!-- Nút Tải Hình Nền & Nút Quay Lại -->
+            <div class="w-full flex gap-3 opacity-0 transform translate-y-4 transition-all duration-500 delay-300"
+                id="action-buttons">
+                <button onclick="resetForm()"
+                    class="w-14 h-14 bg-[#111] hover:bg-[#222] border border-white/10 text-white rounded-2xl flex items-center justify-center flex-shrink-0 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                    </svg>
                 </button>
-                <button onclick="copyBaoCao()" class="btn-gradient px-5 md:px-8 py-2 md:py-3 text-[13px] md:text-base font-bold flex items-center gap-1.5 md:gap-2 shadow-md">
-                    <i class="ph-fill ph-copy text-base md:text-lg"></i> Sao chép
+
+                <button onclick="downloadWallpaper()" id="downloadBtn"
+                    class="flex-1 bg-cyber-green hover:bg-cyber-neon active:scale-95 text-[#050505] rounded-2xl py-4 text-[16px] font-bold tracking-wide transition-all duration-300 flex items-center justify-center gap-2 shadow-[0_0_20px_rgba(74,222,128,0.3)]">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24"
+                        stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5"
+                            d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                    </svg>
+                    <span>Lưu Hình Nền Khóa</span>
                 </button>
             </div>
+
         </div>
     </div>
 
-    <canvas id="snapshot-canvas" class="hidden"></canvas>
-
+    <!-- 🪄 Phép thuật Logic của Trang -->
     <script>
-        let GEMINI_API_KEY = '{{GEMINI_API_KEY}}'; 
-        let GEMINI_MODEL = 'gemini-2.5-flash';
-        
-        const GEMINI_URL = `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent?key=${GEMINI_API_KEY}`;
+        const studentInput = document.getElementById('studentId');
+        const errorMsg = document.getElementById('errorMessage');
+        const inputSection = document.getElementById('input-section');
+        const wallpaperWrapper = document.getElementById('wallpaper-wrapper');
+        const wallpaperPreview = document.getElementById('wallpaper-preview');
+        const actionButtons = document.getElementById('action-buttons');
+        const qrcodeElement = document.getElementById('qrcode');
+        const displayId = document.getElementById('displayId');
 
-        let danhSachSinhVien = [
-            { maSV: '2512101028', ten: 'Nguyễn Kim Bình An', daDen: false },
-            { maSV: '2512101077', ten: 'Phạm Diệp Anh', daDen: false },
-            { maSV: '2512101075', ten: 'Lê Việt Anh', daDen: false },
-            { maSV: '2512101101', ten: 'Ngô Xuân Bảo', daDen: false },
-            { maSV: '2512101091', ten: 'Nguyễn Đức Chung', daDen: false },
-            { maSV: '2512101086', ten: 'Nguyễn Nhật Duy', daDen: false },
-            { maSV: '2512101020', ten: 'Nguyễn Tấn Dũng', daDen: false },
-            { maSV: '2512101099', ten: 'Bùi Văn Dũng', daDen: false },
-            { maSV: '2512101047', ten: 'Cao Đắc Đạt', daDen: false },
-            { maSV: '2512101008', ten: 'Phạm Thành Đạt', daDen: false },
-            { maSV: '2512101085', ten: 'Nguyễn Ngọc Đức', daDen: false },
-            { maSV: '2512101113', ten: 'Hoàng Thị Hân', daDen: false },
-            { maSV: '2512101022', ten: 'Phạm Văn Hân', daDen: false },
-            { maSV: '2512101025', ten: 'Nguyễn Chí Hiếu', daDen: false },
-            { maSV: '2512101007', ten: 'Hà Đức Hiếu', daDen: false },
-            { maSV: '2512101081', ten: 'Nguyễn Trung Hiếu', daDen: false },
-            { maSV: '2512751015', ten: 'Phạm Hoàng Hiệp', daDen: false },
-            { maSV: '2512101087', ten: 'Nguyễn Tiến Hoàng', daDen: false },
-            { maSV: '2512101067', ten: 'Phạm Văn Hoàng', daDen: false },
-            { maSV: '2512101062', ten: 'Ngô Hoàng Huy', daDen: false },
-            { maSV: '2512101037', ten: 'Phạm Quốc Huy', daDen: false },
-            { maSV: '2512101018', ten: 'Phạm Khánh Hưng', daDen: false },
-            { maSV: '2512101060', ten: 'Trần Duy Khánh', daDen: false },
-            { maSV: '2512101016', ten: 'Lê Đình Minh Khôi', daDen: false },
-            { maSV: '2512101042', ten: 'Nguyễn Hoàng Long', daDen: false },
-            { maSV: '2512101092', ten: 'Trần Khánh Ly', daDen: false },
-            { maSV: '2512101069', ten: 'Lê Minh', daDen: false },
-            { maSV: '2512101019', ten: 'Lê Đức Minh', daDen: false },
-            { maSV: '2512101073', ten: 'Nguyễn Phú Minh', daDen: false },
-            { maSV: '2512101125', ten: 'Nguyễn Thị Ngọc Minh', daDen: false },
-            { maSV: '2512101095', ten: 'Phạm Trung Nghĩa', daDen: false },
-            { maSV: '2512101011', ten: 'Đỗ Khánh Nguyên', daDen: false },
-            { maSV: '2512101112', ten: 'Hoàng Thị Nhiên', daDen: false },
-            { maSV: '2512101089', ten: 'Vũ Đức Phong', daDen: false },
-            { maSV: '2512101083', ten: 'Lê Thế Hoàng Phong', daDen: false },
-            { maSV: '2512101110', ten: 'Nguyễn Mai Phương', daDen: false },
-            { maSV: '2512101084', ten: 'Nguyễn Anh Quân', daDen: false },
-            { maSV: '2512101013', ten: 'Hà Công Quyền', daDen: false },
-            { maSV: '2512101065', ten: 'Hoàng Thái Sơn', daDen: false },
-            { maSV: '2512101055', ten: 'Nguyễn Công Tiến', daDen: false },
-            { maSV: '2512101004', ten: 'Nguyễn Văn Trường', daDen: false },
-            { maSV: '2512101005', ten: 'Tô Anh Tuấn', daDen: false },
-            { maSV: '2512101049', ten: 'Đỗ Anh Tú', daDen: false },
-            { maSV: '2512101009', ten: 'Nguyễn Quang Vinh', daDen: false }
-        ];
+        let qrCodeObj = null;
 
-        let videoStream = null;
-        let barcodeReader = null; 
-        let nativeDetector = null; 
-        
-        let dangBanDocMaVach = false; 
-        let dangBanDocGemini = false; 
+        studentInput.addEventListener('keypress', function (e) {
+            if (e.key === 'Enter') generateWallpaper();
+        });
 
-        window.onload = function() {
-            renderDanhSach();
-            capNhatTrangThai(`<i class="ph-fill ph-check-circle text-emerald-500 text-base md:text-lg"></i> Nạp ${danhSachSinhVien.length} hồ sơ thành công.`, 'info');
-            
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.onvoiceschanged = () => { window.speechSynthesis.getVoices(); };
-                window.speechSynthesis.getVoices();
-            }
-        };
-
-        async function khoiDongCamera() {
-            const video = document.getElementById('camera-feed');
-            const placeholder = document.getElementById('camera-placeholder');
-            const btnStart = document.getElementById('btn-start-camera');
-
-            try {
-                btnStart.innerHTML = `<i class="ph-fill ph-spinner-gap animate-spin text-lg md:text-xl"></i> Khởi tạo môi trường...`;
-                btnStart.disabled = true;
-
-                try {
-                    if ('BarcodeDetector' in window) {
-                        nativeDetector = new BarcodeDetector({ formats: ['code_128'] });
-                    }
-                } catch (e) {
-                    console.log("BarcodeDetector không hỗ trợ, sử dụng thư viện ZXing dự phòng.");
-                }
-
-                if (!barcodeReader) {
-                    const hints = new Map();
-                    hints.set(ZXing.DecodeHintType.POSSIBLE_FORMATS, [ZXing.BarcodeFormat.CODE_128]);
-                    barcodeReader = new ZXing.BrowserMultiFormatReader(hints); 
-                }
-
-                // Xin quyền với lý tưởng sắc nét, ưu tiên camera sau
-                videoStream = await navigator.mediaDevices.getUserMedia({ 
-                    video: { facingMode: "environment", width: { ideal: 1920 }, height: { ideal: 1080 } } 
-                });
-                
-                video.srcObject = videoStream;
-                video.setAttribute("playsinline", true);
-                video.play();
-                
-                placeholder.style.display = 'none';
-                btnStart.style.display = 'none';
-                document.getElementById('scan-guide').classList.remove('hidden');
-                document.getElementById('scan-guide').classList.add('flex');
-                document.getElementById('auto-badge').classList.remove('hidden');
-                
-                capNhatTrangThai(`<i class="ph-fill ph-rocket text-blue-500 text-base md:text-lg"></i> Sẵn sàng! AI đang bảo vệ ngầm.`, "success");
-                
-                vongLapQuetMaVach(); 
-                vongLapGeminiAI();   
-
-            } catch (err) {
-                console.error(err);
-                capNhatTrangThai(`<i class="ph-fill ph-warning-circle text-rose-500 text-base md:text-lg"></i> Bị từ chối quyền camera.`, "error");
-                btnStart.innerHTML = `<i class="ph-fill ph-arrow-counter-clockwise text-lg md:text-xl"></i> Thử Kích Hoạt Lại`;
-                btnStart.disabled = false;
-            }
+        function showError(message) {
+            errorMsg.textContent = message;
+            errorMsg.classList.remove('opacity-0');
+            studentInput.classList.add('border-cyber-green/50');
+            setTimeout(() => {
+                errorMsg.classList.add('opacity-0');
+                studentInput.classList.remove('border-cyber-green/50');
+            }, 3000);
         }
 
-        async function vongLapQuetMaVach() {
-            if (!videoStream) return;
-            if (dangBanDocMaVach) {
-                // ⚡ Ép xung: Giảm độ trễ chờ lặp lại xuống 50ms (Gần như liên tục)
-                setTimeout(vongLapQuetMaVach, 50);
+        function generateWallpaper() {
+            const text = studentInput.value.replace(/\s+/g, '');
+
+            if (!text) {
+                showError('❀ Nhập mã sinh viên để Trang làm hình nền nhé!');
                 return;
             }
 
-            const video = document.getElementById('camera-feed');
-            
-            if (video.videoWidth > 0 && video.videoHeight > 0) {
-                dangBanDocMaVach = true; 
-                let barcodeText = null;
+            // Cập nhật text hiển thị trên thẻ
+            displayId.textContent = text;
 
-                try {
-                    if (nativeDetector) {
-                        const barcodes = await nativeDetector.detect(video);
-                        if (barcodes.length > 0) barcodeText = barcodes[0].rawValue.toUpperCase();
-                    }
+            // Xóa mã QR cũ
+            qrcodeElement.innerHTML = '';
 
-                    if (!barcodeText && barcodeReader) {
-                        const canvas = document.getElementById('snapshot-canvas');
-                        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-                        const cropWidth = video.videoWidth * 0.8;
-                        const cropHeight = video.videoHeight * 0.4;
-                        const startX = (video.videoWidth - cropWidth) / 2;
-                        const startY = (video.videoHeight - cropHeight) / 2;
-
-                        canvas.width = cropWidth;
-                        canvas.height = cropHeight;
-                        
-                        ctx.filter = 'grayscale(100%) contrast(250%)';
-                        ctx.drawImage(video, startX, startY, cropWidth, cropHeight, 0, 0, cropWidth, cropHeight);
-                        ctx.filter = 'none'; 
-                        
-                        try {
-                            const result = await barcodeReader.decodeFromCanvas(canvas);
-                            barcodeText = result.text.toUpperCase();
-                        } catch (e) {}
-                    }
-                    
-                    if (barcodeText) {
-                        for (let i = 0; i < danhSachSinhVien.length; i++) {
-                            let sv = danhSachSinhVien[i];
-                            if (sv.daDen) continue;
-
-                            if (barcodeText === sv.maSV.toUpperCase()) {
-                                sv.daDen = true;
-                                hieuUngThanhCong();
-                                docTenSinhVien();
-                                renderDanhSach();
-                                capNhatTrangThai(`<i class="ph-fill ph-check-circle text-emerald-500 text-base md:text-lg"></i> Điểm danh: <b class="text-slate-800">${sv.ten}</b>`, "success");
-                                break;
-                            }
-                        }
-                        
-                        // ⚡ Ép xung: Giảm thời gian khóa nhịp (cooldown) xuống đúng 200ms (0.2s) theo lệnh anh Hoàng!
-                        setTimeout(() => {
-                            dangBanDocMaVach = false;
-                            vongLapQuetMaVach();
-                        }, 200); 
-                        return; 
-                    }
-                } catch (err) {}
-                
-                dangBanDocMaVach = false;
-            }
-            setTimeout(vongLapQuetMaVach, 50); // ⚡ Giảm delay chờ lặp lại
-        }
-
-        async function vongLapGeminiAI() {
-            if (!videoStream) return;
-            if (dangBanDocGemini) return; 
-
-            const video = document.getElementById('camera-feed');
-            
-            if (video.videoWidth > 0 && video.videoHeight > 0) {
-                dangBanDocGemini = true;
-
-                try {
-                    const canvas = document.createElement('canvas');
-                    const cropWidth = video.videoWidth * 0.7; 
-                    const cropHeight = video.videoHeight * 0.4;
-                    const scaleFactor = 0.5; 
-                    
-                    canvas.width = cropWidth * scaleFactor;
-                    canvas.height = cropHeight * scaleFactor;
-                    const ctx = canvas.getContext('2d');
-                    
-                    ctx.drawImage(video, (video.videoWidth - cropWidth) / 2, (video.videoHeight - cropHeight) / 2, cropWidth, cropHeight, 0, 0, canvas.width, canvas.height);
-                    
-                    const base64ImageData = canvas.toDataURL('image/jpeg', 0.4).split(',')[1];
-                    const promptText = "Trích xuất dãy số Mã Sinh Viên (khoảng 10 chữ số) từ thẻ này. Chỉ in ra dãy số.";
-
-                    const response = await fetch(GEMINI_URL, {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            contents: [{
-                                role: "user",
-                                parts: [
-                                    { text: promptText },
-                                    { inlineData: { mimeType: "image/jpeg", data: base64ImageData } }
-                                ]
-                            }],
-                            systemInstruction: { parts: [{ text: "Trích xuất mã sinh viên chính xác tuyệt đối." }] }
-                        })
-                    });
-
-                    if (response.ok) {
-                        const data = await response.json();
-                        let aiText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-                        
-                        if (aiText) {
-                            aiText = aiText.trim().toUpperCase();
-                            for (let i = 0; i < danhSachSinhVien.length; i++) {
-                                let sv = danhSachSinhVien[i];
-                                if (!sv.daDen && aiText.includes(sv.maSV.toUpperCase())) {
-                                    sv.daDen = true;
-                                    hieuUngThanhCong();
-                                    docTenSinhVien();
-                                    renderDanhSach();
-                                    capNhatTrangThai(`<i class="ph-fill ph-magic-wand text-purple-500 text-base md:text-lg"></i> AI: <b class="text-slate-800">${sv.ten}</b> (${sv.maSV})`, "success");
-                                    break;
-                                }
-                            }
-                        }
-                    }
-                } catch (error) {
-                    console.log("Lỗi kết nối AI ngầm:", error);
-                }
-            }
-            
-            dangBanDocGemini = false;
-            setTimeout(vongLapGeminiAI, 1000); // ⚡ AI Ngầm gọi mỗi giây để giữ độ ổn định máy chủ
-        }
-
-        function docTenSinhVien() {
-            if ('speechSynthesis' in window) {
-                window.speechSynthesis.cancel();
-                const utterance = new SpeechSynthesisUtterance('Ô kê');
-                utterance.lang = 'vi-VN';
-                utterance.rate = 1.3;
-                utterance.pitch = 1.3;
-                
-                const voices = window.speechSynthesis.getVoices();
-                const viVoice = voices.find(voice => voice.lang.includes('vi') && (voice.name.toLowerCase().includes('female') || voice.name.toLowerCase().includes('google')));
-                if (viVoice) {
-                    utterance.voice = viVoice;
-                }
-                
-                window.speechSynthesis.speak(utterance);
-            }
-        }
-
-        function hieuUngThanhCong() {
-            const focusBox = document.getElementById('focus-box');
-            focusBox.classList.add('scan-success');
-            // ⚡ Ép xung: Giảm thời gian chớp nháy thành công xuống còn 0.2s (200ms)
-            setTimeout(() => focusBox.classList.remove('scan-success'), 200);
-        }
-
-        function renderDanhSach() {
-            const tbody = document.getElementById('student-table-body');
-            const countAttended = document.getElementById('count-attended');
-            const countTotal = document.getElementById('count-total');
-
-            tbody.innerHTML = '';
-            let soNguoiDaDen = 0;
-
-            danhSachSinhVien.forEach((sv, index) => {
-                if (sv.daDen) soNguoiDaDen++;
-                
-                const rowClass = sv.daDen ? "bg-white" : "hover:bg-slate-100/50 transition-colors";
-                const statusHtml = sv.daDen 
-                    ? `<span class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[11px] font-bold bg-emerald-50 text-emerald-600 border border-emerald-100"><i class="ph-fill ph-check-circle text-xs sm:text-sm"></i> Đã Có Mặt</span>`
-                    : `<span class="inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-full text-[9px] sm:text-[11px] font-bold bg-slate-100 text-slate-500 border border-slate-200"><i class="ph-fill ph-minus-circle text-xs sm:text-sm"></i> Vắng Mặt</span>`;
-
-                tbody.innerHTML += `
-                    <tr class="${rowClass} cursor-pointer border-b border-slate-100/80 last:border-0 group" onclick="diemDanhThuCong(${index})">
-                        <td class="p-3 md:p-4 font-mono text-slate-500 text-[11px] sm:text-xs md:text-sm group-hover:text-blue-600 transition-colors align-middle">${sv.maSV}</td>
-                        <td class="p-3 md:p-4 font-semibold text-slate-700 text-[11px] sm:text-xs md:text-sm align-middle">${sv.ten}</td>
-                        <td class="p-3 md:p-4 text-right align-middle whitespace-nowrap">${statusHtml}</td>
-                    </tr>
-                `;
-            });
-
-            countAttended.innerText = soNguoiDaDen;
-            countTotal.innerText = danhSachSinhVien.length;
-        }
-
-        function diemDanhThuCong(index) {
-            let sv = danhSachSinhVien[index];
-            sv.daDen = !sv.daDen; 
-            renderDanhSach();
-            if(sv.daDen) capNhatTrangThai(`<i class="ph-fill ph-pencil-simple text-blue-500 text-base md:text-lg"></i> Cập nhật thủ công: <b class="text-slate-800">${sv.ten}</b>`, "info");
-            else capNhatTrangThai(`<i class="ph-fill ph-eraser text-amber-500 text-base md:text-lg"></i> Hủy điểm danh: <b class="text-slate-800">${sv.ten}</b>`, "warning");
-        }
-
-        function capNhatTrangThai(message, type = 'info') {
-            const statusBox = document.getElementById('system-status');
-            statusBox.innerHTML = message;
-            
-            statusBox.className = "mt-3 md:mt-5 p-3 md:p-4 rounded-[12px] md:rounded-[16px] flex items-center gap-2 md:gap-3 text-xs md:text-sm font-medium transition-all duration-300 ";
-            
-            if (type === 'success') statusBox.className += "bg-emerald-50 text-emerald-700 border border-emerald-100";
-            else if (type === 'error') statusBox.className += "bg-rose-50 text-rose-700 border border-rose-100";
-            else if (type === 'warning') statusBox.className += "bg-amber-50 text-amber-700 border border-amber-100";
-            else statusBox.className += "bg-slate-50 text-slate-600 border border-slate-100";
-        }
-
-        async function tongHopBaoCao() {
-            capNhatTrangThai(`<i class="ph-fill ph-spinner-gap animate-spin text-blue-500 text-base md:text-lg"></i> Đang tải dữ liệu...`, "loading");
             try {
-                const docId = '1mQwL6HWog20bK21V7C8fhmj30yhe35xBHAl3nvVkMkY';
-                const exportUrl = `https://docs.google.com/document/d/${docId}/export?format=txt`;
-                
-                const proxies = [
-                    `https://corsproxy.io/?${encodeURIComponent(exportUrl)}`,
-                    `https://api.allorigins.win/raw?url=${encodeURIComponent(exportUrl)}`,
-                    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(exportUrl)}`
-                ];
-
-                let textData = null;
-
-                for (let proxyUrl of proxies) {
-                    try {
-                        const response = await fetch(proxyUrl);
-                        if (response.ok) {
-                            textData = await response.text();
-                            break; 
-                        }
-                    } catch (err) {
-                        console.log("Trạm trung chuyển này đang bận, thử trạm khác...");
-                    }
-                }
-
-                if (!textData) {
-                    throw new Error("Tất cả các trạm trung chuyển đều bị nghẽn.");
-                }
-                
-                const danhSachXinPhep = textData.split('\n').map(line => line.trim().toUpperCase()).filter(line => line.length > 0);
-
-                let vangKhongPhep = [];
-                let vangCoPhep = [];
-
-                danhSachSinhVien.forEach(sv => {
-                    if (!sv.daDen) {
-                        const laCoPhep = danhSachXinPhep.some(line => line.includes(sv.maSV.toUpperCase()) || line.includes(sv.ten.toUpperCase()));
-                        if (laCoPhep) vangCoPhep.push(sv);
-                        else vangKhongPhep.push(sv);
-                    }
+                // Trang "bắt mạch" lỗi này: Camera chỉ đọc điểm tối trên nền sáng (Dark on Light).
+                // Phải đổi chấm QR thành màu ĐEN sâu, nền XANH NEON sáng thì mới vừa cyberpunk vừa quét cực nhạy!
+                qrCodeObj = new QRCode(qrcodeElement, {
+                    text: text,
+                    width: 512,
+                    height: 512,
+                    colorDark: "#050505",
+                    colorLight: "#86efac",
+                    correctLevel: QRCode.CorrectLevel.M
                 });
 
-                const homNay = new Date();
-                const ngayThang = `${String(homNay.getDate()).padStart(2, '0')}/${String(homNay.getMonth() + 1).padStart(2, '0')}/${homNay.getFullYear()}`;
-                
-                let noiDung = `Thầy/Cô ơi, hôm nay ngày ${ngayThang} lớp CT2901 vắng những bạn sau:\n\n- Những bạn không phép:\n`;
-                if (vangKhongPhep.length === 0) noiDung += `  (Không có)\n`;
-                else vangKhongPhep.forEach(sv => noiDung += `  + ${sv.ten} - ${sv.maSV}\n`);
-                
-                noiDung += `\n- Những bạn có phép:\n`;
-                if (vangCoPhep.length === 0) noiDung += `  (Không có)\n`;
-                else vangCoPhep.forEach(sv => noiDung += `  + ${sv.ten} - ${sv.maSV}\n`);
+                // Chuyển đổi màn hình: Ẩn form nhập, Hiện Wallpaper
+                inputSection.classList.add('opacity-0', 'scale-95', 'pointer-events-none', 'hidden');
+                wallpaperWrapper.classList.remove('hidden');
 
-                document.getElementById('report-text-area').value = noiDung;
-                moModalBaoCao();
-                capNhatTrangThai(`<i class="ph-fill ph-check-circle text-emerald-500 text-base md:text-lg"></i> Báo cáo đã sẵn sàng!`, "success");
+                // Kích hoạt hiệu ứng xuất hiện mềm mại
+                setTimeout(() => {
+                    wallpaperPreview.classList.add('show');
+                    actionButtons.classList.remove('opacity-0', 'translate-y-4');
+                }, 50);
+
             } catch (error) {
-                console.error(error);
-                capNhatTrangThai(`<i class="ph-fill ph-warning-circle text-rose-500 text-base md:text-lg"></i> Lỗi kết nối đám mây!`, "error");
+                showError('❀ Dữ liệu đang bị quá tải, anh thử rút gọn lại nha...');
             }
         }
 
-        function moModalBaoCao() {
-            const modal = document.getElementById('report-modal');
-            const content = document.getElementById('report-modal-content');
-            modal.classList.remove('opacity-0', 'pointer-events-none');
-            modal.classList.add('opacity-100');
-            content.classList.remove('scale-95');
-            content.classList.add('scale-100');
-        }
+        function resetForm() {
+            // Quay lại màn hình nhập liệu
+            wallpaperPreview.classList.remove('show');
+            actionButtons.classList.add('opacity-0', 'translate-y-4');
 
-        function dongModalBaoCao() {
-            const modal = document.getElementById('report-modal');
-            const content = document.getElementById('report-modal-content');
-            modal.classList.remove('opacity-100');
-            modal.classList.add('opacity-0', 'pointer-events-none');
-            content.classList.remove('scale-100');
-            content.classList.add('scale-95');
-        }
-
-        function copyBaoCao() {
-            const textArea = document.getElementById('report-text-area');
-            textArea.select();
-            textArea.setSelectionRange(0, 99999); 
-            document.execCommand('copy');
-            
-            const toast = document.getElementById('copy-toast');
-            toast.classList.remove('opacity-0');
-            toast.classList.add('opacity-100');
             setTimeout(() => {
-                toast.classList.remove('opacity-100');
-                toast.classList.add('opacity-0');
-            }, 2000);
-            window.getSelection().removeAllRanges();
+                wallpaperWrapper.classList.add('hidden');
+                inputSection.classList.remove('hidden');
+                setTimeout(() => {
+                    inputSection.classList.remove('opacity-0', 'scale-95', 'pointer-events-none');
+                }, 50);
+            }, 500);
+        }
+
+        // ❀ Phép thuật xuất ảnh từ HTML của Trang ❀
+        function downloadWallpaper() {
+            const btn = document.getElementById('downloadBtn');
+            const originalText = btn.innerHTML;
+
+            // Đổi trạng thái nút để báo cho anh Hoàng biết Trang đang xử lý
+            btn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-black" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Đang nén năng lượng...`;
+
+            // Dùng html2canvas để chụp lại khối #wallpaper-preview
+            html2canvas(wallpaperPreview, {
+                scale: 3, // Phóng to gấp 3 lần để ảnh nét căng như Sony!
+                useCORS: true,
+                backgroundColor: '#080a08' // Đảm bảo nền màu đen sâu
+            }).then(canvas => {
+                // Tạo link tải ảnh
+                const link = document.createElement('a');
+                link.download = `LockScreen_${studentInput.value.replace(/\s+/g, '')}.png`;
+                link.href = canvas.toDataURL("image/png");
+                link.click();
+
+                // Trả lại trạng thái nút
+                btn.innerHTML = originalText;
+            }).catch(err => {
+                alert("❀ Trang xin lỗi, có chút trục trặc khi tạo ảnh rồi ạ!");
+                btn.innerHTML = originalText;
+            });
         }
     </script>
 </body>
+
 </html>
