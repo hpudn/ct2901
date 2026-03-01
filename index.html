@@ -572,6 +572,8 @@
                 // KIỂM TRA MÃ
                 if (qrText) {
                     let timThayThanhCong = false;
+                    let daDiemDanhRoi = false;
+                    let tenSinhVien = "";
                     qrText = qrText.trim().toUpperCase();
 
                     // 🌟 TỐI ƯU KIẾN TRÚC MÃ: Bóc tách phần đằng sau chữ "SV"
@@ -582,25 +584,36 @@
 
                     for (let i = 0; i < danhSachSinhVien.length; i++) {
                         let sv = danhSachSinhVien[i];
-                        if (sv.daDen) continue;
 
                         // 🌟 Dò tìm cực nhanh: Chỉ so sánh mã đã bóc tách với mã của sinh viên
                         if (scannedMsv === sv.maSV.toUpperCase()) {
-                            sv.daDen = true;
-                            timThayThanhCong = true;
-                            hieuUngThanhCong();
-                            docTenSinhVien();
-                            renderDanhSach();
-                            capNhatTrangThai(`<i class="ph-fill ph-check-circle text-emerald-500 text-lg"></i> Quét thành công: <b class="text-slate-800">${sv.ten}</b>`, "success");
+                            tenSinhVien = sv.ten;
+                            if (sv.daDen) {
+                                daDiemDanhRoi = true;
+                            } else {
+                                sv.daDen = true;
+                                timThayThanhCong = true;
+                            }
                             break;
                         }
                     }
 
                     if (timThayThanhCong) {
+                        hieuUngThanhCong();
+                        docTenSinhVien();
+                        renderDanhSach();
+                        capNhatTrangThai(`<i class="ph-fill ph-check-circle text-emerald-500 text-lg"></i> Quét thành công: <b class="text-slate-800">${tenSinhVien}</b>`, "success");
                         setTimeout(() => {
                             dangBanDocQR = false;
                             vongLapQuetQR();
                         }, 500);
+                        return;
+                    } else if (daDiemDanhRoi) {
+                        capNhatTrangThai(`<i class="ph-fill ph-info text-blue-500 text-lg"></i> Sinh viên <b class="text-slate-800">${tenSinhVien}</b> đã được điểm danh trước đó!`, "info");
+                        setTimeout(() => {
+                            dangBanDocQR = false;
+                            vongLapQuetQR();
+                        }, 1500);
                         return;
                     } else {
                         capNhatTrangThai(`<i class="ph-fill ph-warning-circle text-amber-500 text-lg"></i> Mã không hợp lệ: <b class="text-amber-600">${qrText}</b>`, "warning");
