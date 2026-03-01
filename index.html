@@ -381,6 +381,100 @@
         </div>
     </div>
 
+    <!-- Modal Thống Kê / Lịch Sử -->
+    <div id="history-modal"
+        class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/40 backdrop-blur-sm transition-all duration-300 opacity-0 pointer-events-none">
+        <div id="history-modal-content"
+            class="bg-white rounded-[24px] shadow-2xl w-[90%] max-w-xl p-5 md:p-6 transform scale-95 transition-transform duration-300 flex flex-col max-h-[90vh]">
+
+            <!-- HEADER MODAL -->
+            <div id="history-header" class="flex justify-between items-center mb-4 shrink-0 transition-all">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-[14px] bg-purple-50 flex items-center justify-center text-purple-600">
+                        <i class="ph-fill ph-clock-counter-clockwise text-xl"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-lg font-bold text-slate-800 leading-tight">Lịch Sử Lưu Trạng Thái</h3>
+                        <p class="text-xs text-slate-500 font-medium mt-0.5">Các mốc thời gian điểm danh đã lưu</p>
+                    </div>
+                </div>
+                <button onclick="dongModalThongKe()"
+                    class="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors shrink-0">
+                    <i class="ph-bold ph-x text-lg"></i>
+                </button>
+            </div>
+
+            <!-- VIEW 1: DANH SÁCH LỊCH SỬ -->
+            <div id="history-list-view"
+                class="bg-slate-50 border border-slate-200 rounded-[16px] p-2 mb-5 overflow-y-auto custom-scrollbar flex-grow transition-all">
+                <table class="w-full text-left text-sm">
+                    <thead class="bg-slate-100/50 sticky top-0 z-10">
+                        <tr>
+                            <th class="p-3 text-xs uppercase tracking-wider border-b border-slate-200 text-slate-500">
+                                Thời Gian</th>
+                            <th
+                                class="p-3 text-xs uppercase tracking-wider text-center border-b border-slate-200 text-emerald-600">
+                                Có Mặt</th>
+                            <th
+                                class="p-3 text-xs uppercase tracking-wider text-center border-b border-slate-200 text-rose-500">
+                                Vắng</th>
+                        </tr>
+                    </thead>
+                    <tbody id="history-table-body" class="divide-y divide-slate-100">
+                        <!-- Content goes here -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- VIEW 2: CHI TIẾT NGƯỜI VẮNG THEO PHIÊN -->
+            <div id="history-detail-view"
+                class="hidden flex-col bg-slate-50 border border-slate-200 rounded-[16px] p-4 lg:p-5 mb-5 overflow-y-auto custom-scrollbar flex-grow transition-all">
+
+                <div class="flex items-center gap-2 mb-4 shrink-0">
+                    <button onclick="quayLaiLichSu()"
+                        class="w-8 h-8 flex items-center justify-center bg-white border border-slate-200 text-slate-500 rounded-full hover:bg-slate-100 transition-colors shadow-sm">
+                        <i class="ph-bold ph-arrow-left text-sm"></i>
+                    </button>
+                    <h4 id="detail-time-title" class="font-bold text-slate-700 text-sm md:text-base ml-1">...</h4>
+                </div>
+
+                <div class="space-y-4">
+                    <!-- Khu vực Vắng không phép -->
+                    <div
+                        class="bg-white p-3 md:p-4 rounded-[12px] border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                        <h5
+                            class="flex items-center gap-1.5 font-bold text-rose-600 text-xs uppercase tracking-wider mb-2.5">
+                            <i class="ph-fill ph-warning-circle text-base"></i> Vắng không phép (<span
+                                id="detail-unexcused-count">0</span>)
+                        </h5>
+                        <ul id="detail-unexcused-list"
+                            class="list-disc list-inside text-[13px] md:text-sm text-slate-700 space-y-1.5 ml-1 opacity-90 marker:text-rose-400">
+                        </ul>
+                    </div>
+
+                    <!-- Khu vực Vắng có phép -->
+                    <div
+                        class="bg-white p-3 md:p-4 rounded-[12px] border border-slate-100 shadow-[0_2px_8px_rgba(0,0,0,0.02)]">
+                        <h5
+                            class="flex items-center gap-1.5 font-bold text-amber-500 text-xs uppercase tracking-wider mb-2.5">
+                            <i class="ph-fill ph-envelope-open text-base"></i> Vắng có phép (<span
+                                id="detail-excused-count">0</span>)
+                        </h5>
+                        <ul id="detail-excused-list"
+                            class="list-disc list-inside text-[13px] md:text-sm text-slate-700 space-y-1.5 ml-1 opacity-90 marker:text-amber-400">
+                        </ul>
+                    </div>
+                </div>
+            </div>
+
+            <!-- FOOTER MODAL -->
+            <div class="flex justify-end shrink-0">
+                <button onclick="dongModalThongKe()"
+                    class="px-5 py-2.5 rounded-full text-slate-600 font-bold hover:bg-slate-100 transition-colors text-sm">Đóng</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         let danhSachSinhVien = [
             { maSV: '2512101028', ten: 'Nguyễn Kim Bình An', daDen: false },
@@ -708,7 +802,31 @@
             const dateStr = `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
 
             const absent = danhSachSinhVien.length - soNguoiDaDen;
-            lichSuDiemDanh.unshift({ id: Date.now(), timeStr: timeStr, dateStr: dateStr, attended: soNguoiDaDen, absent: absent });
+
+            // Lấy danh sách bạn vắng để lưu vào lịch sử
+            let vangList = danhSachSinhVien.filter(sv => !sv.daDen);
+            let coPhepNames = ["Phạm Khánh Hưng"]; // Hardcode tên các bạn có phép như list báo cáo
+
+            let absentUnexcused = [];
+            let absentExcused = [];
+
+            vangList.forEach(sv => {
+                if (coPhepNames.includes(sv.ten)) {
+                    absentExcused.push(sv);
+                } else {
+                    absentUnexcused.push(sv);
+                }
+            });
+
+            lichSuDiemDanh.unshift({
+                id: Date.now(),
+                timeStr: timeStr,
+                dateStr: dateStr,
+                attended: soNguoiDaDen,
+                absent: absent,
+                absentUnexcused: absentUnexcused,
+                absentExcused: absentExcused
+            });
             capNhatTrangThai(`<i class="ph-fill ph-floppy-disk text-blue-500 text-lg"></i> Đã lưu phiên lúc ${timeStr}!`, "success");
         }
 
@@ -791,6 +909,82 @@
                 }
                 textArea.remove();
             }
+        }
+
+        function moModalThongKe() {
+            quayLaiLichSu(); // Ensure we are on the list view initially
+            const tbody = document.getElementById('history-table-body');
+            tbody.innerHTML = '';
+
+            if (lichSuDiemDanh.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="p-6 text-center text-slate-400 text-sm font-medium">Chưa có dữ liệu lưu trữ nào.</td>
+                    </tr>
+                `;
+            } else {
+                lichSuDiemDanh.forEach(log => {
+                    tbody.innerHTML += `
+                        <tr class="hover:bg-slate-100 transition-colors cursor-pointer group" onclick="xemChiTietLichSu(${log.id})">
+                            <td class="p-3 font-medium text-slate-700 group-hover:text-purple-600 transition-colors">
+                                <span class="bg-blue-100 text-blue-700 px-2.5 py-1 rounded text-xs font-bold mr-2">${log.timeStr}</span>
+                                <span class="text-xs text-slate-400 hidden sm:inline-block">${log.dateStr}</span>
+                            </td>
+                            <td class="p-3 text-center font-bold text-emerald-600">${log.attended}</td>
+                            <td class="p-3 text-center font-bold text-rose-500 group-hover:underline underline-offset-2">${log.absent}</td>
+                        </tr>
+                    `;
+                });
+            }
+
+            const modal = document.getElementById('history-modal');
+            const modalContent = document.getElementById('history-modal-content');
+            modal.classList.remove('opacity-0', 'pointer-events-none');
+            setTimeout(() => {
+                modalContent.classList.remove('scale-95');
+                modalContent.classList.add('scale-100');
+            }, 10);
+        }
+
+        function xemChiTietLichSu(id) {
+            const log = lichSuDiemDanh.find(l => l.id === id);
+            if (!log) return;
+
+            document.getElementById('history-list-view').classList.add('hidden');
+            document.getElementById('history-detail-view').classList.remove('hidden');
+            document.getElementById('history-detail-view').classList.add('flex');
+
+            document.getElementById('detail-time-title').innerText = `Chi tiết phiên lúc ${log.timeStr} - ${log.dateStr}`;
+
+            // Render danh sách không phép
+            const unexcusedList = document.getElementById('detail-unexcused-list');
+            document.getElementById('detail-unexcused-count').innerText = log.absentUnexcused.length;
+            unexcusedList.innerHTML = log.absentUnexcused.length > 0
+                ? log.absentUnexcused.map(sv => `<li>${sv.ten} <span class="text-slate-400 text-xs">- ${sv.maSV}</span></li>`).join('')
+                : '<li class="list-none text-slate-400 italic text-xs ml-0">Không có ai</li>';
+
+            // Render danh sách có phép
+            const excusedList = document.getElementById('detail-excused-list');
+            document.getElementById('detail-excused-count').innerText = log.absentExcused.length;
+            excusedList.innerHTML = log.absentExcused.length > 0
+                ? log.absentExcused.map(sv => `<li>${sv.ten} <span class="text-slate-400 text-xs">- ${sv.maSV}</span></li>`).join('')
+                : '<li class="list-none text-slate-400 italic text-xs ml-0">Không có ai</li>';
+        }
+
+        function quayLaiLichSu() {
+            document.getElementById('history-detail-view').classList.add('hidden');
+            document.getElementById('history-detail-view').classList.remove('flex');
+            document.getElementById('history-list-view').classList.remove('hidden');
+        }
+
+        function dongModalThongKe() {
+            const modal = document.getElementById('history-modal');
+            const modalContent = document.getElementById('history-modal-content');
+            modalContent.classList.remove('scale-100');
+            modalContent.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('opacity-0', 'pointer-events-none');
+            }, 300);
         }
     </script>
 </body>
